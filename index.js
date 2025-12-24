@@ -12,21 +12,26 @@ app.use(express.json());
 const PI_API_KEY = process.env.PI_API_KEY;
 
 if (!PI_API_KEY) {
-  console.error("❌ Missing PI_API_KEY in .env");
+  console.error("❌ Missing PI_API_KEY");
   process.exit(1);
 }
 
-app.post("/approve-payment", async (req, res) => {
-  const { payment
+const PI_API_BASE = "https://api.minepi.com/v2/payments";
 
+/**
+ * Approve + Complete Pi Payment
+ */
+app.post("/approve-payment", async (req, res) => {
+  const { paymentId } = req.body;
 
   if (!paymentId) {
     return res.status(400).json({ error: "Missing paymentId" });
   }
 
   try {
-    const response = await axios.post(
-      `https://api.minepi.com/v2/payments/${paymentId}/approve`,
+    // 1️⃣ APPROVE PAYMENT
+    await axios.post(
+      `${PI_API_BASE}/${paymentId}/approve`,
       {},
       {
         headers: {
@@ -36,14 +41,29 @@ app.post("/approve-payment", async (req, res) => {
       }
     );
 
-    res.json({ success: true, data: response.data });
+    // 2️⃣ COMPLETE PAYMENT  🔥 (QUESTO ERA IL PEZZO MANCANTE)
+    await axios.post(
+      `${PI_API_BASE}/${paymentId}/complete`,
+      {},
+      {
+        headers: {
+          Authorization: `Key ${PI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    // 3️⃣ DONE
+    res.json({ success: true });
   } catch (err) {
-    console.error("❌ Pi payment approval failed", err.response?.data || err);
-    res.status(500).json({ error: "Payment approval failed" });
+    console.error(
+      "❌ Pi payment error",
+      err.response?.data || err.message
+    );
+    res.status(500).json({ error: "Pi payment failed" });
   }
 });
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`✅ Pi payment backend running on port ${PORT}`);
-});
+  console.log(`
