@@ -17,7 +17,8 @@ if (!PI_API_KEY) {
 }
 
 app.post("/approve-payment", async (req, res) => {
-  const { paymentId } = req.body;
+  const { payment
+
 
   if (!paymentId) {
     return res.status(400).json({ error: "Missing paymentId" });
