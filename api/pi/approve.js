@@ -1,60 +1,23 @@
-import { useState } from "react";
+export default async function handler(req, res) {
+  try {
+    const { paymentId } = req.body;
 
-declare global {
-  interface Window {
-    Pi: any;
-  }
-}
-
-export default function VerifyPi() {
-  const [error, setError] = useState<string | null>(null);
-  const backend = import.meta.env.VITE_BACKEND_URL;
-
-  const verify = async () => {
-    setError(null);
-
-    try {
-      await window.Pi.createPayment(
-        {
-          amount: 0.01,
-          memo: "App verification",
-          metadata: { type: "verify" }
-        },
-        {
-          onReadyForServerApproval: async (paymentId: string) => {
-            await fetch(`${backend}/api/pi/approve`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId })
-            });
-          },
-
-          onReadyForServerCompletion: async (paymentId: string, txid: string) => {
-            await fetch(`${backend}/api/pi/complete`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ paymentId, txid })
-            });
-          },
-
-          onCancel: () => {
-            setError("Transaction cancelled");
-          },
-
-          onError: (err: any) => {
-            setError(err?.message || "Payment error");
-          }
+    const response = await fetch(
+      `https://api.minepi.com/v2/payments/${paymentId}/approve`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Key ${process.env.PI_API_KEY}`,
+          "Content-Type": "application/json"
         }
-      );
-    } catch {
-      setError("Failed to start payment");
-    }
-  };
+      }
+    );
 
-  return (
-    <div>
-      <button onClick={verify}>Verify with Pi (0.01 Pi)</button>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-    </div>
-  );
+    const data = await response.json();
+
+    return res.status(200).json(data);
+  } catch (err) {
+    console.error("APPROVE ERROR", err);
+    return res.status(500).json({ error: "approve failed" });
+  }
 }
